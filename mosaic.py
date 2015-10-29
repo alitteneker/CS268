@@ -211,8 +211,11 @@ def mergeImages(images, transforms):
     size = [ maxP[0] - minP[0], maxP[1] - minP[1] ]
     canvas = np.zeros( ( size[1], size[0], 3), np.uint8 )
     for i in range( 0, len(images) ):
-        cv2.warpPerspective( images[i].imgData, transforms[i].mat, ( size[0], size[1] ), canvas )
-        plt.show()
+        warped = cv2.warpPerspective( images[i].imgData, transforms[i].mat, ( size[0], size[1] ) )
+        ret, mask = cv2.threshold( cv2.cvtColor( warped, cv2.COLOR_BGR2GRAY ), 0, 255, cv2.THRESH_BINARY )
+        canvas_bg = cv2.bitwise_and( canvas, canvas, mask = cv2.bitwise_not(mask) )
+        warped_fg = cv2.bitwise_and( warped, warped, mask = mask )
+        cv2.add(canvas_bg, warped_fg, canvas)
     return canvas
 
 def readInput(filename):
