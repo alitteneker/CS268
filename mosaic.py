@@ -105,26 +105,26 @@ class Transformation:
 
 FLANN_INDEX_KDTREE = 0
 class Image:
-    # Call anything within 3 pixels a match
-    THRESH_MAX_DIST = 3
-    # If we happen across a transform which can get 50% of our matches to correspond, immediately call it a success
-    THRESH_VOTE_PERCENT = 0.5
+    # Call anything within some distance in pixels a match
+    THRESH_MAX_DIST = 4
+    # If we happen across a transform which can get a sizable percentaget of our putative matches to correspond, immediately call it a success
+    THRESH_VOTE_PERCENT = 0.4
     INDEX_GEN = 0
     sift = cv2.xfeatures2d.SIFT_create()
     flann = cv2.FlannBasedMatcher( dict( algorithm = FLANN_INDEX_KDTREE, trees = 5 ), dict() )
     def __init__(self, filename):
-        print repr(filename)
         self.imgData = cv2.imread(filename, cv2.IMREAD_COLOR)
         self.width = self.imgData.shape[1]
         self.height = self.imgData.shape[0]
         self._buildFeatures()
         self.index = Image.INDEX_GEN
         Image.INDEX_GEN += 1
+        print "\tLoaded image " + repr(filename) + " to index " + str(self.index) + " and found " + str(len(self.kp)) + " features"
     def _buildFeatures(self):
         self.kp, self.des = Image.sift.detectAndCompute(self.imgData, None)
     def _buildMatches(self, other):
         full_matches = Image.flann.knnMatch(self.des, other.des, k=2)
-        # Reduce the putative matches down to a more manageable set using Lowe's simple ratio test
+        # Filter the initial matches down to a more manageable putative set using Lowe's simple ratio test
         matches = []
         for i,(m,n) in enumerate(full_matches):
             if m.distance < 0.7 * n.distance:
@@ -132,16 +132,18 @@ class Image:
         return matches
     def contains(self, point):
         return point[0] >= 0 and point[0] < self.width and point[1] >= 0 and point[1] < self.height
-    def _getTransform(self, other, myFeats, otherFeats):
+    def _getTransform(self, other, matches):
+        myFeats, otherFeats = self._matchesToPoints(other, matches)
         return Transformation( Transformation.buildHomography(myFeats, otherFeats), [self.index, other.index] )
     def _testTransform(self, trans, other, matches):
-        votes = 0
+        votes, match_votes = 0, []
         for match in matches:
             myFeat = np.array( self.kp[match.queryIdx].pt )
             otherFeat = trans.transform( list(other.kp[match.trainIdx].pt) )
             if np.linalg.norm( myFeat - otherFeat ) <= Image.THRESH_MAX_DIST:
                 votes += 1
-        return votes
+                match_votes.append(match)
+        return votes, match_votes
     def _matchesToPoints(self, other, matches):
         reta, retb = [], []
         for match in matches:
@@ -150,35 +152,40 @@ class Image:
         return reta, retb
     def findTransform(self, other):
         matches = self._buildMatches(other)
-        print "Found " + str(len(matches)) + " putative matches"
+        print "\t\tFound " + str(len(matches)) + " putative matches"
         if len(matches) < 10:
             return False
         max_combs = scipy.misc.comb(len(matches), 4) / 8
         thresh_votes = len(matches) * Image.THRESH_VOTE_PERCENT
-        i, best_score, best_trans = 0, 10, False
+        i, best_score, best_trans, best_matches = 0, 10, False, []
         while i < max_combs:
             i += 1
             comb = randomCombination(matches, 4)
-            kp1, kp2 = self._matchesToPoints(other, comb)
-            trans = self._getTransform(other, kp1, kp2)
-            score = self._testTransform(trans, other, matches)
-            if score >= thresh_votes:
-                return trans
+            trans = self._getTransform(other, comb)
+            score, match_votes = self._testTransform(trans, other, matches)
             if score > best_score:
                 best_score = score
                 best_trans = trans
-        # TODO: if we find a best_trans, then try to use all of the points which match to form a more robust estimation
-        return best_trans
+                best_matches = match_votes
+                print "\t\t\tAttempt " + str(i) + " : votes " + str(score)
+            if best_score >= thresh_votes:
+                break
+        if best_trans:
+            print "\t\tSuccess with " + str(len(best_matches)) + " votes (" + str( 100 * float(len(best_matches)) / len(matches) ) + "%)"
+            return self._getTransform(other, best_matches)
+        return false
 
 def findTransformations(images):
     transforms = []
     # Start out by looking for direct correspondence transformations between images
     for i in range( 0, len(images) ):
         for j in range( i+1, len(images) ):
+            print "\tSearching for direct transformation from " + str(j) + " to " + str(i)
             trans = images[i].findTransform(images[j])
             if trans:
-                print "Found transformation from " + str(j) + " to " + str(i)
                 transforms.append(trans)
+            else:
+                print "\t\tNo reasonable direct transformation found"
     imageTransforms = [ Transformation( np.matrix([[1,0,0],[0,1,0],[0,0,1]], np.dtype(float)), [0,0] ) ]
     for i in range(1, len(images)):
         counter = 0
@@ -211,6 +218,7 @@ def mergeImages(images, transforms):
     size = [ maxP[0] - minP[0], maxP[1] - minP[1] ]
     canvas = np.zeros( ( size[1], size[0], 3), np.uint8 )
     for i in range( 0, len(images) ):
+        print "\tMerging image " + str(i)
         warped = cv2.warpPerspective( images[i].imgData, transforms[i].mat, ( size[0], size[1] ) )
         ret, mask = cv2.threshold( cv2.cvtColor( warped, cv2.COLOR_BGR2GRAY ), 0, 255, cv2.THRESH_BINARY )
         canvas_bg = cv2.bitwise_and( canvas, canvas, mask = cv2.bitwise_not(mask) )
@@ -221,14 +229,13 @@ def mergeImages(images, transforms):
 def readInput(filename):
     images = []
     f = open(filename, 'r')
+    print "Loading images from file " + filename
     while True:
         line = f.readline()
-        if not line:
+        if not line or line[0:-1] == "END":
             break
         if line.isspace():
             continue
-        if line[0:-1] == "END":
-            break
         img = Image( line[0:-1] )
         images.append(img)
     return images
@@ -243,6 +250,8 @@ def main(inputFile, outputFile):
     #   1) identify a transformation for each image on to a common coordinate system
     #   2) use the transformations to merge each image in to a composite mosaic image
     imageTransforms = findTransformations(images)
+    print "Transformations identified for all images"
+
     mergedImage = mergeImages(images, imageTransforms)
     print "Mosaic image generated. Shape (height, width, channels): " + str(mergedImage.shape)
 
