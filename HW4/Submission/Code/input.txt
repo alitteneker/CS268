@@ -1,0 +1,31 @@
+K_MATRIX 533.15 0 315.30 0 534.51 245.98 0 0 1
+
+BEGIN IMAGE_FILENAMES
+Data/images/001.png Data/depths/001.csv
+Data/images/002.png Data/depths/002.csv
+Data/images/003.png Data/depths/003.csv
+Data/images/004.png Data/depths/004.csv
+Data/images/005.png Data/depths/005.csv
+Data/images/006.png Data/depths/006.csv
+Data/images/007.png Data/depths/007.csv
+Data/images/008.png Data/depths/008.csv
+Data/images/009.png Data/depths/009.csv
+Data/images/010.png Data/depths/010.csv
+Data/images/011.png Data/depths/011.csv
+Data/images/012.png Data/depths/012.csv
+Data/images/013.png Data/depths/013.csv
+Data/images/014.png Data/depths/014.csv
+Data/images/015.png Data/depths/015.csv
+Data/images/016.png Data/depths/016.csv
+Data/images/017.png Data/depths/017.csv
+Data/images/018.png Data/depths/018.csv
+Data/images/019.png Data/depths/019.csv
+Data/images/020.png Data/depths/020.csv
+Data/images/021.png Data/depths/021.csv
+Data/images/022.png Data/depths/022.csv
+Data/images/023.png Data/depths/023.csv
+Data/images/024.png Data/depths/024.csv
+Data/images/025.png Data/depths/025.csv
+Data/images/026.png Data/depths/026.csv
+Data/images/027.png Data/depths/027.csv
+END IMAGE_FILENAMES

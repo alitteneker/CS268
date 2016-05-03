@@ -1,0 +1,4 @@
+The depth images have been scaled from 0-1 (0-255 depending on how you load them). The maximum metric depth in the images is 3.4941 (listed below as maxDepth). Make sure you re-scale the depth maps so that the maximum distance in the entire dataset is maxDepth. You should be able to do this by just multiplying the depths by maxDepth.
+
+
+maxDepth = 3.4941;

@@ -1,0 +1,4 @@
+Focal Lengths: 533.15 534.51 (fuRgb, fvRgb)
+Principal Point: 315.30 245.98 (cuRgb, cvRgbEdit)
+Radial (OpenCV Style): 0.0728 -0.3772  0.4652 (k0, k1, k4)
+(tangential) 0.0060 -0.0002 (k2, k3)

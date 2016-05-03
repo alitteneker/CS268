@@ -1,0 +1,17 @@
+( a1, a2 ), ( b1, b2 ), ( c1, c2 ) = features
+ba1, ba2, ca1, ca2 = b1-a1, b2-a2, c1-a1, c2-a2
+lba1, lba2, lca1, lca2 = map( np.linalg.norm, [ ba1, ba2, ca1, ca2 ] )
+thresh_dist, thresh_angle = 0.001, 2 * math.pi / 180
+if lba1 == 0 or lba2 == 0 or lca1 == 0 or lca2 == 0 or abs(lba1-lba2) > thresh_dist or abs(lca1-lca2) > thresh_dist or abs( acos(dot(ba1,ca1)/(lba1*lca1)) - acos(dot(ba2,ca2)/(lba2*lca2)) ) > thresh_angle:
+    #print str(abs(lba1-lba2)) + ", " + str(abs(lca1-lca2)) + ", " + str(abs( acos(dot(ba1,ca1)/(lba1*lca1)) - acos(dot(ba2,ca2)/(lba2*lca2)) ))
+    return False, None
+nba1, nba2, nca1, nca2 = ba1/lba1, ba2/lba2, ca1/lca1, ca2/lca2
+t1 = translate(  a1 )
+t2 = translate( -a2 )
+rb = rotateAxis( acos( dot( nba1, nba2 ) ),                                                                                         cross( nba2, nba1 ) )
+rc = rotateAxis( acos( ndot( projectOntoPlane( nca1, vector([0]*4), nba1 ), projectOntoPlane( rb * nca2, vector([0]*4), nba1 ) ) ),                nba1 )
+trans = t1 * rc * rb * t2
+print np.linalg.norm( a1 - ( trans * a2 ) )
+print np.linalg.norm( ba1 - ( rb * ba2 ) )
+print np.linalg.norm( c1 - ( trans * c2 ) )
+return True, trans
